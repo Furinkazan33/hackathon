@@ -35,7 +35,7 @@ const PLANET = {
         population: planet => planet.population,
         class: planet => planet.class,
         distances: planet => distances => distances[PLANET.GET.id(planet)],
-        distance: id => planet => PLANET.GET.distances(planet)(PLANETS_DISTANCES)[id]
+        distance: id => planet => PLANETS_DISTANCES[planet.id][id]
     },
     TEST: {
         is_habitable: planet => PLANETS.CONST.CLASS_PRIORITY[PLANET.GET.class(planet)] < 4,
@@ -63,25 +63,28 @@ const SORT = {
 /*
  * Executed once
  */
-const _dist = (planets, i) => planet =>
-    i == planets.length - 1 ?
-        { [PLANET.GET.id(planets[i])]: UTILS.compute_distance(PLANET.GET.coordinates(planet), PLANET.GET.coordinates(planets[i])) }
-    :   PLANET.GET.id(planets[i]) == PLANET.GET.id(planet) ?
-            _dist(planets, i + 1)(planet)
-        :   Object.assign({ [PLANET.GET.id(planets[i])]: UTILS.compute_distance(PLANET.GET.coordinates(planet), PLANET.GET.coordinates(planets[i])) }, _dist(planets, i + 1)(planet))
+const _dist = (planets_array, i, result) => planet =>
+    i == planets_array.length - 1 
+    ?   result.push({ [PLANET.GET.id(planets_array[i])]: UTILS.compute_distance(PLANET.GET.coordinates(planet), 
+                                                                    PLANET.GET.coordinates(planets_array[i])) })
+    :   PLANET.GET.id(planets_array[i]) == PLANET.GET.id(planet) 
+        ?   result
+        :   result.push(_dist(planets_array, i + 1, 
+                [ { [PLANET.GET.id(planets_array[i])]: UTILS.compute_distance(  PLANET.GET.coordinates(planet), 
+                                                                                PLANET.GET.coordinates(planets_array[i])) } ])(planet))
 
-const _dists = (planets, i) =>
-    i == planets.length - 1 ?
-        { [PLANET.GET.id(planets[i])]: dist(planets)(planets[i]) }
-    :   Object.assign({ [PLANET.GET.id(planets[i])]: dist(planets)(planets[i]) }, _dists(planets, i + 1))
+const _dists = (planets_array, i, result) =>
+    i == planets_array.length - 1 ?
+        result.push({ [PLANET.GET.id(planets_array[i])]: dist(planets_array)(planets_array[i]) })
+    :   result.push(_dists(planets_array, i + 1, [ { [PLANET.GET.id(planets_array[i])]: dist(planets_array)(planets_array[i]) }]))
 
 
 // Returns all the distances from 1 planet eg { 1: 20, 2: 24.413, 23: 26, }
-const dist = planets_array => planet => _dist(planets_array, 0)(planet)
+const dist = planets_array => planet => _dist(planets_array, 0, [])(planet)
 //console.log("Distances from planet 0", dist(planets_array)({ id: 0, type: 0, coordinates: { x: 1, y: 5 }, population: 0, class: "L", }))
 
 // Returns dist for every planets eg { 0: dist(planet0), 1: dist(planet1), }
-const dists = planets_array => _dists(planets_array, 0)
+const dists = planets_array => _dists(planets_array, 0, [])
 
 
 
@@ -155,4 +158,31 @@ Different strategies :
 
 */
 
+const sort_distances = distances => distances.sort((d1, d2) => d1.distance - d2.distance)
+const sort_graph = graph => graph.map(one_planet => sort_distances(one_planet.distances))
 
+
+// Computes distance graph
+function make_graph(planets_array) {
+    var graph = [];
+
+    for (var i = 0; i < planets_array.length; i++) {
+        var planet1 = planets_array[i];
+        var distances = [];
+
+        for (var j = 0; j < planets_array.length; j++) {
+            if (i != j) {
+                var planet2 = planets_array[j];
+                distances.push({ id: planet2.id, distance: UTILS.compute_distance(PLANET.GET.coordinates(planet1), PLANET.GET.coordinates(planet2)) });
+            }
+        }
+        graph.push({ id: planet1.id, distances: distances })
+    }
+    sort_graph(graph);
+
+    return graph;
+}
+
+const graph = make_graph(planets_array)
+
+console.log(graph)
