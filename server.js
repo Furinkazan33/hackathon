@@ -32,7 +32,7 @@ const PLANET = {
         coordinates: planet => ({ x: planet.x, y: planet.y }),
         population: planet => planet.units,
         class: planet => planet.classe,
-        distances: planet => distances => distances.find(d => d.id == planet.id),
+        distances: planet => distances => distances.find(d => d.id == planet.id).distances,
         distance: id => planet => PLANETS_DISTANCES[planet.id][id]
     },
     TEST: {
@@ -43,16 +43,16 @@ const PLANET = {
         is_other: planet => planet.owner == PLANETS.CONST.OWNER.OTHER,
     },
 }
-/*
+
 const COMPARE = {
     population: (a, b) => a - b,
     distance: c0 => (c1, c2) => UTILS.compute_distance(c0, c1) - UTILS.compute_distance(c0, c2),
 }
-*/
+
 
 const SORT = {
-    //population: UTILS.sort_by(COMPARE.population),
-    //distance: planet => planets => UTILS.sort_by(COMPARE.distance(PLANET.GET.coordinates(planet)))(planets),
+    population: UTILS.sort_by(COMPARE.population),
+    distance: planet => planets => UTILS.sort_by(COMPARE.distance(PLANET.GET.coordinates(planet)))(planets),
     distances: distances => distances.sort((d1, d2) => d1.distance - d2.distance),
 }
 
@@ -63,7 +63,7 @@ const ORDER = {
 }
 
 //Computes distance graph - executed once
-function make_graph(planets_array) {
+function make_graph(planets_array, cb) {
     var graph = []
 
     for (var i = 0; i < planets_array.length; i++) {
@@ -81,7 +81,7 @@ function make_graph(planets_array) {
 
     graph.map(one_planet => SORT.distances(one_planet.distances))
 
-    return graph
+    return cb(null, graph)
 }
 
 // Get the nearest planet which is not mine and livable
@@ -129,11 +129,11 @@ app.post("/", function (request, response) {
     var free_planets = PLANETS.FILTER.free_planets(planets_array)
     var other_planets = PLANETS.FILTER.other_planets(planets_array)
     
-    /*
+    
     UTILS.log("my_planets", my_planets)
     UTILS.log("free_planets", free_planets)
     UTILS.log("other_planets", other_planets)
-    */
+    
     /*
     var json = { 
         planets: 
@@ -351,20 +351,41 @@ app.post("/", function (request, response) {
     }
     */
 
-    if (! games.find(game_id)) {
+    var orders
+
+    // First round
+    if (! games.find(id => id == game_id)) {
         games.push(game_id)
 
-        PLANETS_DISTANCES = make_graph(planets_array)
-        UTILS.log("Distances from every planets", PLANETS_DISTANCES)
+        make_graph(planets_array, function(err, res){ 
+            PLANETS_DISTANCES = res
+
+            UTILS.log("Distances from every planets", PLANETS_DISTANCES)
+            
+            var planet1 = PLANETS.FILTER.planet_id(1)(planets_array)
+            UTILS.log("PLANET.TEST.is_livable(planet1)", PLANET.TEST.is_livable(planet1))
+            UTILS.log("planets_array", planets_array)
+            UTILS.log("planet1", planet1)
+            UTILS.log("PLANET.GET.distances(planet1)", PLANET.GET.distances(planet1)(PLANETS_DISTANCES))
+            UTILS.log("PLANET.GET.distance(2)(planet1)", PLANET.GET.distance(2)(planet1))
+            UTILS.log("SORT.distance(planet1)(planets_array)", SORT.distance(planet1)(planets_array))
+
+            // Attacks without any terraforming
+            orders = ORDER.make_order(attack_from(my_planets), [])
         
-        var planet1 = PLANETS.FILTER.planet_id(1)(planets_array)
-        UTILS.log("PLANET.TEST.is_livable(planet1)", PLANET.TEST.is_livable(planet1))
-        UTILS.log("planets_array", planets_array)
-        UTILS.log("planet1", planet1)
-        UTILS.log("PLANET.GET.distances(planet1)", PLANET.GET.distances(planet1)(PLANETS_DISTANCES))
-        UTILS.log("PLANET.GET.distance(2)(planet1)", PLANET.GET.distance(2)(planet1))
-        UTILS.log("SORT.distance(planet1)(planets_array)", SORT.distance(planet1)(planets_array))
-    }   
+            UTILS.log("orders", orders)
+          
+            response.json(orders)
+        })
+    }
+    else {
+        // Attacks without any terraforming
+        orders = ORDER.make_order(attack_from(my_planets), [])
+    
+        UTILS.log("orders", orders)
+      
+        response.json(orders)
+    }
 
     /*
     var order_example = { 
@@ -377,18 +398,12 @@ app.post("/", function (request, response) {
     var order = ORDER.make_order(fleets, terraformings)
     UTILS.log("order", order)
     */
-   
-    // Attacks without any terraforming
-    var orders = ORDER.make_order(attack_from(my_planets), [])
 
-    UTILS.log("orders", orders)
-  
-    response.json(orders)
 })
 
 
 
 
-var listener = app.listen(process.env.PORT, function () {
+var listener = app.listen(process.env.PORT, process.env.IP, function () {
     UTILS.log("Your app is listening on port " + listener.address().port)
 })
