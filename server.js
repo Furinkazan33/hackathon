@@ -379,9 +379,11 @@ app.post("/", function (request, response) {
     */
    
     // Attacks without any terraforming
-    var res = ORDER.make_order(attack_from(my_planets), [])
+    var orders = ORDER.make_order(attack_from(my_planets), [])
+
+    UTILS.log("orders", orders)
   
-    response.json({ res })
+    response.json(orders)
 })
 
 
