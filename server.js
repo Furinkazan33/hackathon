@@ -114,7 +114,7 @@ app.use(bodyParser.urlencoded({ extended: true })) // support encoded bodies
 
 //app.use(express.static('public'));
 
-var first_time = true
+var games = []
 
 app.post("/", function (request, response) {
     var json = request.body
@@ -123,6 +123,7 @@ app.post("/", function (request, response) {
     var planets_array = json.planets
     var fleets_array = json.fleets
     var turns_left = json.config.maxTurn - json.config.turn
+    var game_id = json.config.id
 
     var my_planets = PLANETS.FILTER.my_planets(planets_array)
     var free_planets = PLANETS.FILTER.free_planets(planets_array)
@@ -350,11 +351,11 @@ app.post("/", function (request, response) {
     }
     */
 
+    if (! games.find(game_id)) {
+        games.push(game_id)
 
-    if (first_time) {
         PLANETS_DISTANCES = make_graph(planets_array)
         UTILS.log("Distances from every planets", PLANETS_DISTANCES)
-        first_time = false
         
         var planet1 = PLANETS.FILTER.planet_id(1)(planets_array)
         UTILS.log("PLANET.TEST.is_livable(planet1)", PLANET.TEST.is_livable(planet1))
