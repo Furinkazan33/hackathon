@@ -118,7 +118,7 @@ var first_time = true
 
 app.post("/", function (request, response) {
     var json = request.body
-    UTILS.log(json)
+    //UTILS.log(json)
 
     var planets_array = json.planets
     var fleets_array = json.fleets
@@ -128,10 +128,11 @@ app.post("/", function (request, response) {
     var free_planets = PLANETS.FILTER.free_planets(planets_array)
     var other_planets = PLANETS.FILTER.other_planets(planets_array)
     
+    /*
     UTILS.log("my_planets", my_planets)
     UTILS.log("free_planets", free_planets)
     UTILS.log("other_planets", other_planets)
-
+    */
     /*
     var json = { 
         planets: 
@@ -354,17 +355,15 @@ app.post("/", function (request, response) {
         PLANETS_DISTANCES = make_graph(planets_array)
         UTILS.log("Distances from every planets", PLANETS_DISTANCES)
         first_time = false
-    }
-
-    /*
-    var planet1 = PLANETS.FILTER.planet_id(1)(planets_array)
-    UTILS.log("PLANET.TEST.is_livable(planet1)", PLANET.TEST.is_livable(planet1))
-    UTILS.log("planets_array", planets_array)
-    UTILS.log("planet1", planet1)
-    UTILS.log("PLANET.GET.distances(planet1)", PLANET.GET.distances(planet1)(PLANETS_DISTANCES))
-    UTILS.log("PLANET.GET.distance(2)(planet1)", PLANET.GET.distance(2)(planet1))
-    UTILS.log("SORT.distance(planet1)(planets_array)", SORT.distance(planet1)(planets_array))
-    */
+        
+        var planet1 = PLANETS.FILTER.planet_id(1)(planets_array)
+        UTILS.log("PLANET.TEST.is_livable(planet1)", PLANET.TEST.is_livable(planet1))
+        UTILS.log("planets_array", planets_array)
+        UTILS.log("planet1", planet1)
+        UTILS.log("PLANET.GET.distances(planet1)", PLANET.GET.distances(planet1)(PLANETS_DISTANCES))
+        UTILS.log("PLANET.GET.distance(2)(planet1)", PLANET.GET.distance(2)(planet1))
+        UTILS.log("SORT.distance(planet1)(planets_array)", SORT.distance(planet1)(planets_array))
+    }   
 
     /*
     var order_example = { 
