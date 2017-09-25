@@ -11,18 +11,9 @@ const UTILS = {
     sort_by: compare_fn => array => array.sort(compare_fn),
 }
 
-const PLANETS = {
-    FILTER: {
-        planet_id: id => planets => planets.find(p => p.id == id),
-        free_planets: planets => planets.filter(PLANET.TEST.is_free),
-        my_planets: planets => planets.filter(PLANET.TEST.is_mine),
-        other_planets: planets => planets.filter(PLANET.TEST.is_other),
-        //player_planets: player => planets => planets.filter(PLANET.TEST.belongs_to(player)),
-    },
-    CONST: {
-        OWNER: { FREE: 0, ME: 1, OTHER: 2, },
-        CLASS_PRIORITY: { "M": 0, "L": 1, "K": 2, "H": 3, "D": 4, "N": 5, "J": 6 },
-    },
+const CONST = {
+    OWNER: { FREE: 0, ME: 1, OTHER: 2, },
+    CLASS_PRIORITY: { "M": 0, "L": 1, "K": 2, "H": 3, "D": 4, "N": 5, "J": 6 },
 }
 
 const PLANET = {
@@ -36,12 +27,23 @@ const PLANET = {
         distance: id => planet => PLANETS_DISTANCES[planet.id][id]
     },
     TEST: {
-        is_livable: planet => PLANETS.CONST.CLASS_PRIORITY[planet.classe] < 4,
+        is_livable: planet => CONST.CLASS_PRIORITY[planet.classe] < 4,
         belongs_to: owner => planet => planet.owner == owner,
-        is_free: planet => planet.owner == PLANETS.CONST.OWNER.FREE,
-        is_mine: planet => planet.owner == PLANETS.CONST.OWNER.ME,
-        is_other: planet => planet.owner == PLANETS.CONST.OWNER.OTHER,
+        is_free: planet => planet.owner == CONST.OWNER.FREE,
+        is_mine: planet => planet.owner == CONST.OWNER.ME,
+        is_other: planet => planet.owner == CONST.OWNER.OTHER,
     },
+}
+
+const PLANETS = {
+    FILTER: {
+        planet_id: id => planets => planets.find(p => p.id == id),
+        free_planets: planets => planets.filter(PLANET.TEST.is_free),
+        my_planets: planets => planets.filter(PLANET.TEST.is_mine),
+        other_planets: planets => planets.filter(PLANET.TEST.is_other),
+        //player_planets: player => planets => planets.filter(PLANET.TEST.belongs_to(player)),
+    },
+    
 }
 
 const COMPARE = {
@@ -73,10 +75,10 @@ function make_graph(planets_array, cb) {
         for (var j = 0; j < planets_array.length; j++) {
             if (i != j) {
                 var planet2 = planets_array[j]
-                distances.push({ id: planet2.id, distance: UTILS.compute_distance(PLANET.GET.coordinates(planet1), PLANET.GET.coordinates(planet2)) })
+                distances.push({ id: planet2.id, owner: planet2.owner, classe: planet2.classe, distance: UTILS.compute_distance(PLANET.GET.coordinates(planet1), PLANET.GET.coordinates(planet2)) })
             }
         }
-        graph.push({ id: planet1.id, distances: distances })
+        graph.push({ id: planet1.id, owner: planet1.owner, classe: planet1.classe, distances: distances })
     }
 
     graph.map(one_planet => SORT.distances(one_planet.distances))
@@ -84,19 +86,22 @@ function make_graph(planets_array, cb) {
     return cb(null, graph)
 }
 
+
+const getfirst = planets_array => planets_array[0]
+
 // Get the nearest planet which is not mine and livable
 const get_nearest_to_attack = planet =>
     PLANET.GET.distances(planet)(PLANETS_DISTANCES)
         .filter(p => ! PLANET.TEST.is_mine(p))
-        .filter(p => PLANET.TEST.is_livable(p))[0]
+        .filter(p => PLANET.TEST.is_livable(p))
 
 const fleets_attack_nearest_planet = my_planets =>
     my_planets.map(planet => 
-        ORDER.make_fleet(PLANET.GET.population / 2, PLANET.GET.id(planet), PLANET.GET.id(get_nearest_to_attack(planet)))
+        ORDER.make_fleet(parseInt(PLANET.GET.population(planet) / 4) + 1, PLANET.GET.id(planet), PLANET.GET.id(getfirst(get_nearest_to_attack(planet))))
     )
 
 const attack_from = my_planets =>
-        fleets_attack_nearest_planet(my_planets)
+    fleets_attack_nearest_planet(my_planets)
 
 
 /*
@@ -121,18 +126,18 @@ app.post("/", function (request, response) {
     //UTILS.log(json)
 
     var planets_array = json.planets
-    var fleets_array = json.fleets
-    var turns_left = json.config.maxTurn - json.config.turn
+    //var fleets_array = json.fleets
+    //var turns_left = json.config.maxTurn - json.config.turn
     var game_id = json.config.id
 
     var my_planets = PLANETS.FILTER.my_planets(planets_array)
-    var free_planets = PLANETS.FILTER.free_planets(planets_array)
-    var other_planets = PLANETS.FILTER.other_planets(planets_array)
+    //var free_planets = PLANETS.FILTER.free_planets(planets_array)
+    //var other_planets = PLANETS.FILTER.other_planets(planets_array)
     
     
-    UTILS.log("my_planets", my_planets)
-    UTILS.log("free_planets", free_planets)
-    UTILS.log("other_planets", other_planets)
+    //UTILS.log("my_planets", my_planets)
+    //UTILS.log("free_planets", free_planets)
+    //UTILS.log("other_planets", other_planets)
     
     /*
     var json = { 
