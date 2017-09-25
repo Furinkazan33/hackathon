@@ -36,7 +36,7 @@ const PLANET = {
         distance: id => planet => PLANETS_DISTANCES[planet.id][id]
     },
     TEST: {
-        is_habitable: planet => PLANETS.CONST.CLASS_PRIORITY[planet.classe] < 4,
+        is_livable: planet => PLANETS.CONST.CLASS_PRIORITY[planet.classe] < 4,
         belongs_to: owner => planet => planet.owner == owner,
         is_free: planet => planet.owner == PLANETS.CONST.OWNER.FREE,
         is_mine: planet => planet.owner == PLANETS.CONST.OWNER.ME,
@@ -83,6 +83,21 @@ function make_graph(planets_array) {
 
     return graph
 }
+
+// Get the nearest planet which is not mine and livable
+const get_nearest_to_attack = planet =>
+    PLANET.GET.distances(planet)(PLANETS_DISTANCES)
+        .filter(p => ! PLANET.TEST.is_mine(p))
+        .filter(p => PLANET.TEST.is_livable(p))[0]
+
+const fleets_attack_nearest_planet = my_planets =>
+    my_planets.map(planet => 
+        ORDER.make_fleet(PLANET.GET.population / 2, PLANET.GET.id(planet), PLANET.GET.id(get_nearest_to_attack(planet)))
+    )
+
+const attack_from = my_planets =>
+        fleets_attack_nearest_planet(my_planets)
+
 
 /*
 TODO: different strategies :
@@ -343,7 +358,7 @@ app.post("/", function (request, response) {
 
     /*
     var planet1 = PLANETS.FILTER.planet_id(1)(planets_array)
-    UTILS.log("PLANET.TEST.is_habitable(planet1)", PLANET.TEST.is_habitable(planet1))
+    UTILS.log("PLANET.TEST.is_livable(planet1)", PLANET.TEST.is_livable(planet1))
     UTILS.log("planets_array", planets_array)
     UTILS.log("planet1", planet1)
     UTILS.log("PLANET.GET.distances(planet1)", PLANET.GET.distances(planet1)(PLANETS_DISTANCES))
@@ -362,9 +377,9 @@ app.post("/", function (request, response) {
     var order = ORDER.make_order(fleets, terraformings)
     UTILS.log("order", order)
     */
-  
-  
-    var res={}
+   
+    // Attacks without any terraforming
+    var res = ORDER.make_order(attack_from(my_planets), [])
   
     response.json({ res })
 })
