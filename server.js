@@ -382,3 +382,30 @@ Different strategies :
 */
 
 
+var express = require("express")
+var app = express()
+var bodyParser = require("body-parser")
+app.use(bodyParser.json()) // support json encoded bodies
+app.use(bodyParser.urlencoded({ extended: true })) // support encoded bodies
+
+//app.use(express.static('public'));
+
+var first_time = true
+
+app.post("/", function (request, response) {
+    UTILS.log(request.body)
+
+    //first_time ? 
+  
+  
+    var res={}
+  
+    response.json({ res })
+})
+
+
+
+
+var listener = app.listen(process.env.PORT, function () {
+    UTILS.log("Your app is listening on port " + listener.address().port)
+})
