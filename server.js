@@ -1,6 +1,13 @@
 const DEBUG = true
 
+// Distances entre planètes
 var PLANETS_DISTANCES = []
+
+// Liste des id des parties jouées
+var GAMES = []
+
+
+
 
 const UTILS = {
     log: (m1, m2) => DEBUG && console.log(m1, m2),
@@ -41,7 +48,6 @@ const PLANETS = {
         free_planets: planets => planets.filter(PLANET.TEST.is_free),
         my_planets: planets => planets.filter(PLANET.TEST.is_mine),
         other_planets: planets => planets.filter(PLANET.TEST.is_other),
-        //player_planets: player => planets => planets.filter(PLANET.TEST.belongs_to(player)),
     },
     
 }
@@ -97,7 +103,7 @@ const get_nearest_to_attack = planet =>
 
 const fleets_attack_nearest_planet = my_planets =>
     my_planets.map(planet => 
-        ORDER.make_fleet(parseInt(PLANET.GET.population(planet) / 4) + 1, PLANET.GET.id(planet), PLANET.GET.id(getfirst(get_nearest_to_attack(planet))))
+        ORDER.make_fleet(parseInt(PLANET.GET.population(planet) / 5) + 3, PLANET.GET.id(planet), PLANET.GET.id(getfirst(get_nearest_to_attack(planet))))
     )
 
 const attack_from = my_planets =>
@@ -109,6 +115,36 @@ TODO: different strategies :
   - attack : behind, center, sides, front, V shape
   - priorities to attack (nearest, farest)
 */
+function make_commands(planets_array, my_planets, current_game_id, cb) {
+
+    // First round
+    if (! GAMES.find(id => id == current_game_id)) {
+        GAMES.push(current_game_id)
+
+        make_graph(planets_array, function(err, graph){ 
+
+            UTILS.log("Distances from every planets", graph)
+            
+            /*
+                var planet1 = PLANETS.FILTER.planet_id(1)(planets_array)
+                UTILS.log("PLANET.TEST.is_livable(planet1)", PLANET.TEST.is_livable(planet1))
+                UTILS.log("planets_array", planets_array)
+                UTILS.log("planet1", planet1)
+                UTILS.log("PLANET.GET.distances(planet1)", PLANET.GET.distances(planet1)(graph))
+                UTILS.log("PLANET.GET.distance(2)(planet1)", PLANET.GET.distance(2)(planet1))
+                UTILS.log("SORT.distance(planet1)(planets_array)", SORT.distance(planet1)(planets_array))
+            */
+
+            // Attacks without any terraforming
+            cb(null, graph, ORDER.make_order(attack_from(my_planets), []))
+        })
+    }
+    else {
+        // Attacks without any terraforming
+        cb(null, null, ORDER.make_order(attack_from(my_planets), []))
+    }
+}
+
 
 
 var express = require("express")
@@ -117,292 +153,50 @@ var bodyParser = require("body-parser")
 app.use(bodyParser.json()) // support json encoded bodies
 app.use(bodyParser.urlencoded({ extended: true })) // support encoded bodies
 
-//app.use(express.static('public'));
 
-var games = []
 
 app.post("/", function (request, response) {
     var json = request.body
-    //UTILS.log(json)
 
-    var planets_array = json.planets
-    //var fleets_array = json.fleets
-    //var turns_left = json.config.maxTurn - json.config.turn
-    var game_id = json.config.id
+    const planets_array = json.planets
+
+    const current_game_id = json.config.id
 
     var my_planets = PLANETS.FILTER.my_planets(planets_array)
-    //var free_planets = PLANETS.FILTER.free_planets(planets_array)
-    //var other_planets = PLANETS.FILTER.other_planets(planets_array)
-    
-    
-    //UTILS.log("my_planets", my_planets)
-    //UTILS.log("free_planets", free_planets)
-    //UTILS.log("other_planets", other_planets)
-    
     /*
-    var json = { 
-        planets: 
-        [ 
-            { id: 1,    
-                x: 665.1466753684999,    
-                y: 397.883483851,    
-                owner: 0,    
-                units: 52,    
-                mu: 160,    
-                gr: 4,    
-                classe: 'J',    
-                tr: null },    
-            { id: 2,    
-                x: 1229.5130151720002,    
-                y: 81.6290483386,    
-                owner: 1,    
-                units: 145,    
-                mu: 200,    
-                gr: 5,    
-                classe: 'M',    
-                tr: null },    
-            { id: 3,    
-                x: 100.78033555850001,    
-                y: 714.137919367,    
-                owner: 2,    
-                units: 75,    
-                mu: 200,    
-                gr: 5,    
-                classe: 'M',    
-                tr: null },    
-            { id: 4,    
-                x: 293.7982869367,    
-                y: 375.132566836,    
-                owner: 0,    
-                units: 21,    
-                mu: 80,    
-                gr: 2,    
-                classe: 'D',    
-                tr: null },    
-            { id: 5,    
-                x: 1036.4950637924999,    
-                y: 420.634400869,    
-                owner: 0,    
-                units: 21,    
-                mu: 80,    
-                gr: 2,    
-                classe: 'D',    
-                tr: null },    
-            { id: 6,    
-                x: 246.95357164465,    
-                y: 752.7669677050001,    
-                owner: 2,    
-                units: 7,    
-                mu: 120,    
-                gr: 3,    
-                classe: 'J',    
-                tr: null },    
-            { id: 7,    
-                x: 1083.3397790865001,    
-                y: 43,    
-                owner: 0,    
-                units: 39,    
-                mu: 120,    
-                gr: 3,    
-                classe: 'J',    
-                tr: null },    
-            { id: 8,    
-                x: 1110.3477686535,    
-                y: 366.56067383799996,    
-                owner: 0,    
-                units: 65,    
-                mu: 80,    
-                gr: 2,    
-                classe: 'D',    
-                tr: null },    
-            { id: 9,    
-                x: 219.9455820796,    
-                y: 429.206293867,    
-                owner: 0,    
-                units: 65,    
-                mu: 80,    
-                gr: 2,    
-                classe: 'D',    
-                tr: null },    
-            { id: 10,    
-                x: 610.45384964395,    
-                y: 586.8611937430001,    
-                owner: 0,    
-                units: 20,    
-                mu: 120,    
-                gr: 3,    
-                classe: 'H',    
-                tr: null },    
-            { id: 11,    
-                x: 719.8395010885,    
-                y: 208.90577396289999,    
-                owner: 0,    
-                units: 20,    
-                mu: 120,    
-                gr: 3,    
-                classe: 'H',    
-                tr: null },    
-            { id: 12,    
-                x: 150.90328294405,    
-                y: 154.0203814063,    
-                owner: 0,    
-                units: 9,    
-                mu: 40,    
-                gr: 1,    
-                classe: 'K',    
-                tr: null },    
-            { id: 13,    
-                x: 1179.3900677845002,    
-                y: 641.746586299,    
-                owner: 0,    
-                units: 9,    
-                mu: 40,    
-                gr: 1,    
-                classe: 'K',    
-                tr: null },    
-            { id: 14,    
-                x: 398.74285704954997,    
-                y: 556.045477309,    
-                owner: 0,    
-                units: 68,    
-                mu: 200,    
-                gr: 5,    
-                classe: 'M',    
-                tr: null },    
-            { id: 15,    
-                x: 931.5504936789999,    
-                y: 239.72149039689998,    
-                owner: 0,    
-                units: 68,    
-                mu: 200,    
-                gr: 5,    
-                classe: 'M',    
-                tr: null },    
-            { id: 16,    
-                x: 859.4679424240001,    
-                y: 496.05748564600003,    
-                owner: 0,    
-                units: 37,    
-                mu: 200,    
-                gr: 5,    
-                classe: 'M',    
-                tr: null },    
-            { id: 17,    
-                x: 470.82540830519997,    
-                y: 299.70948205959996,    
-                owner: 0,    
-                units: 37,    
-                mu: 200,    
-                gr: 5,    
-                classe: 'M',    
-                tr: null },    
-            { id: 18,    
-                x: 121.47492773,    
-                y: 291.7444243384,    
-                owner: 0,    
-                units: 52,    
-                mu: 160,    
-                gr: 4,    
-                classe: 'K',    
-                tr: null },    
-            { id: 19,    
-                x: 1208.8184230005002,    
-                y: 504.022543366,    
-                owner: 0,    
-                units: 52,    
-                mu: 160,    
-                gr: 4,    
-                classe: 'K',    
-                tr: null },    
-            { id: 20,    
-                x: 1323.7933507305,    
-                y: 635.57063359,    
-                owner: 0,    
-                units: 50,    
-                mu: 160,    
-                gr: 4,    
-                classe: 'K',    
-                tr: null },    
-            { id: 21,    
-                x: 6.5,    
-                y: 160.19633411499998,    
-                owner: 0,    
-                units: 50,    
-                mu: 160,    
-                gr: 4,    
-                classe: 'K',    
-                tr: null },    
-            { id: 22,    
-                x: 240.82369034425,    
-                y: 518.885306767,    
-                owner: 0,    
-                units: 29,    
-                mu: 80,    
-                gr: 2,    
-                classe: 'D',    
-                tr: null },    
-            { id: 23,    
-                x: 1089.4696603895,    
-                y: 276.8816609371,    
-                owner: 0,    
-                units: 29,    
-                mu: 80,    
-                gr: 2,    
-                classe: 'D',    
-                tr: null } 
-        ],    
-        fleets: [ { owner: 2, units: 30, from: 3, to: 22, turns: 12, left: 10 } ],    
-        config: { id: 23, turn: 9, maxTurn: 200 } 
-    }
-    */
-
-    var orders
-
-    // First round
-    if (! games.find(id => id == game_id)) {
-        games.push(game_id)
-
-        make_graph(planets_array, function(err, res){ 
-            PLANETS_DISTANCES = res
-
-            UTILS.log("Distances from every planets", PLANETS_DISTANCES)
-            
-            var planet1 = PLANETS.FILTER.planet_id(1)(planets_array)
-            UTILS.log("PLANET.TEST.is_livable(planet1)", PLANET.TEST.is_livable(planet1))
-            UTILS.log("planets_array", planets_array)
-            UTILS.log("planet1", planet1)
-            UTILS.log("PLANET.GET.distances(planet1)", PLANET.GET.distances(planet1)(PLANETS_DISTANCES))
-            UTILS.log("PLANET.GET.distance(2)(planet1)", PLANET.GET.distance(2)(planet1))
-            UTILS.log("SORT.distance(planet1)(planets_array)", SORT.distance(planet1)(planets_array))
-
-            // Attacks without any terraforming
-            orders = ORDER.make_order(attack_from(my_planets), [])
+        UTILS.log(json)
+        var fleets_array = json.fleets
+        var turns_left = json.config.maxTurn - json.config.turn
+        var free_planets = PLANETS.FILTER.free_planets(planets_array)
+        var other_planets = PLANETS.FILTER.other_planets(planets_array)
         
-            UTILS.log("orders", orders)
-          
-            response.json(orders)
-        })
-    }
-    else {
-        // Attacks without any terraforming
-        orders = ORDER.make_order(attack_from(my_planets), [])
-    
-        UTILS.log("orders", orders)
-      
-        response.json(orders)
-    }
+        UTILS.log("my_planets", my_planets)
+        UTILS.log("free_planets", free_planets)
+        UTILS.log("other_planets", other_planets)
 
-    /*
-    var order_example = { 
-        "fleets": [ { "units": 50, "source": 1, "target": 17 }, { "units": 50, "source": 4, "target": 17 } ],
-        "terraformings": [ { "planet": 1 } ]
-    }
-
-    var fleets = [ ORDER.make_fleet(101, 1, 5), ORDER.make_fleet(102, 1, 10), ORDER.make_fleet(150, 2, 15) ]
-    var terraformings = [ ORDER.make_terraforming(1), ORDER.make_terraforming(5), ORDER.make_terraforming(9), ORDER.make_terraforming(15) ]
-    var order = ORDER.make_order(fleets, terraformings)
-    UTILS.log("order", order)
+        var fleets = [ ORDER.make_fleet(101, 1, 5), ORDER.make_fleet(102, 1, 10), ORDER.make_fleet(150, 2, 15) ]
+        var terraformings = [ ORDER.make_terraforming(1), ORDER.make_terraforming(5), ORDER.make_terraforming(9), ORDER.make_terraforming(15) ]
+        var order = ORDER.make_order(fleets, terraformings)
     */
+
+
+    make_commands(planets_array, my_planets, current_game_id, function (err, graph, comands) {
+
+        //TODO: exceptions
+        if(err) {
+            UTILS.log("error")
+        }
+
+        // First round => distance graph created
+        if (graph) { 
+            PLANETS_DISTANCES = graph
+        }
+
+        UTILS.log("orders", comands)
+        response.json(comands)
+    })
+
+
 
 })
 
