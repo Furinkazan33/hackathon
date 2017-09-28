@@ -88,9 +88,13 @@ const get_population = distance => planets_array =>
 //const get_nearest_to_attack = planet => (planet_get_distances(planet)(PLANETS_DISTANCES).filter(planet_dont_belongs_to_me))
 //.filter(planet_is_livable)
 
-const make_array_order_from = my_planet => n_orders => planets =>
+const under_attack = fleets => planet_id =>
+    fleets.find(f => f.to == planet_id)
+
+
+const make_array_order_from = my_planet => n_orders => planets => fleets =>
     planet_get_distances(my_planet)(PLANETS_DISTANCES)
-        .filter(distance => get_owner(distance)(planets) != CONST.OWNER.ME || get_population(distance)(planets) < 20)
+        .filter(distance => get_owner(distance)(planets) != CONST.OWNER.ME || under_attack(fleets)(distance.id) && get_population(distance)(planets) < 20)
         .splice(0, n_orders)
         .map(p => make_fleet(
             planet_get_units(my_planet) > 25 ? parseInt(planet_get_units(my_planet) / 3)
@@ -101,11 +105,11 @@ const make_array_order_from = my_planet => n_orders => planets =>
     
 
 
-const fleets_attack_nearest_planet = my_planets => n_orders => planets_array =>
-    [].concat(...my_planets.map(planet => make_array_order_from(planet)(n_orders)(planets_array)))
+const fleets_attack_nearest_planet = my_planets => n_orders => planets_array => fleets =>
+    [].concat(...my_planets.map(planet => make_array_order_from(planet)(n_orders)(planets_array)(fleets)))
 
-const attack_from = my_planets => n_orders => planets_array =>
-    fleets_attack_nearest_planet(my_planets)(n_orders)(planets_array)
+const attack_from = my_planets => n_orders => planets_array => fleets =>
+    fleets_attack_nearest_planet(my_planets)(n_orders)(planets_array)(fleets)
 
 
 /*
@@ -113,7 +117,7 @@ TODO: different strategies :
   - attack : behind, center, sides, front, V shape
   - priorities to attack (nearest, farest)
 */
-function make_orders(planets_array, my_planets, current_game_id, cb) {
+function make_orders(planets_array, my_planets, fleets, current_game_id, cb) {
     
     var orders = null
 
@@ -129,7 +133,7 @@ function make_orders(planets_array, my_planets, current_game_id, cb) {
             //log("PLANETS_DISTANCES", PLANETS_DISTANCES)
             
             // Attacks without any terraforming
-            orders = make_order(attack_from(my_planets)(2)(planets_array), [])
+            orders = make_order(attack_from(my_planets)(2)(planets_array)(fleets), [])
             cb(orders)
         })
     }
@@ -139,7 +143,7 @@ function make_orders(planets_array, my_planets, current_game_id, cb) {
         if (ATTACK) {
             ATTACK = false
             // Attacks without any terraforming
-            orders = make_order(attack_from(my_planets)(2)(planets_array), [])
+            orders = make_order(attack_from(my_planets)(2)(planets_array)(fleets), [])
         }
         else {
             ATTACK = true
@@ -187,7 +191,7 @@ app.post("/", function (request, response) {
     */
 
     
-    make_orders(PLANETS_ARRAY, my_planets, current_game_id, function (orders) {
+    make_orders(PLANETS_ARRAY, my_planets, request.body.fleets, current_game_id, function (orders) {
 
         log("orders", orders)
         
