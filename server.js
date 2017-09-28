@@ -6,18 +6,14 @@ var PLANETS_DISTANCES = []
 // Liste des id des parties jouées
 var GAMES = []
 
+var PLANETS_ARRAY = []
+
 // Pour attaquer une fois sur deux
 var ATTACK
 
 
-const UTILS = {
-    log: (m1, m2) => DEBUG && console.log(m1, m2),
-    // c1 and c2 are coordinates as { x: float, y: float }
-    compute_distance: (c1, c2) =>
-        Math.sqrt(Math.pow(parseFloat(c1.x) - parseFloat(c2.x), 2) + Math.pow(parseFloat(c1.y) - parseFloat(c2.y), 2)),
+const log = (m1, m2) => DEBUG && console.log(m1, m2)
 
-    sort_by: compare_fn => array => array.sort(compare_fn),
-}
 
 const CONST = {
     OWNER: { FREE: 0, ME: 1, OTHER: 2, },
@@ -25,55 +21,38 @@ const CONST = {
     FLEET: { UNITS: { MIN: 3, INVALID: 0 } }
 }
 
-const PLANET = {
-    GET: {
-        id: planet => planet.id,
-        owner: planet => planet.owner,
-        coordinates: planet => ({ x: planet.x, y: planet.y }),
-        population: planet => planet.units,
-        class: planet => planet.classe,
-        distances: planet => distances => distances.find(d => d.id == planet.id).distances,
-        distance: id => planet => PLANETS_DISTANCES[planet.id][id]
-    },
-    TEST: {
-        is_livable: planet => CONST.CLASS_PRIORITY[planet.classe] < 4,
-        belongs_to: owner => planet => planet.owner == owner,
-        is_free: planet => planet.owner == CONST.OWNER.FREE,
-        is_mine: planet => planet.owner == CONST.OWNER.ME,
-        is_other: planet => planet.owner == CONST.OWNER.OTHER,
-        is_not_mine: planet => planet.owner != CONST.OWNER.ME,
-    },
-}
+// c1 and c2 are coordinates as { x: float, y: float }
+const compute_distance = (c1, c2) =>
+    Math.sqrt(Math.pow(parseFloat(c1.x) - parseFloat(c2.x), 2) + Math.pow(parseFloat(c1.y) - parseFloat(c2.y), 2))
 
-const PLANETS = {
-    FILTER: {
-        planet_id: id => planets => planets.find(p => p.id == id),
-        free_planets: planets => planets.filter(PLANET.TEST.is_free),
-        my_planets: planets => planets.filter(PLANET.TEST.is_mine),
-        other_planets: planets => planets.filter(PLANET.TEST.is_other),
-    },
-    
-}
+const planet_get_id = planet => planet.id
+const planet_get_coordinates = planet => ({ x: planet.x, y: planet.y })
+const planet_get_units = planet => planet.units
+const planet_get_distances = planet => distances => distances.find(d => d.id == planet.id).distances
+// const planet_get_owner = planet => planet.owner
+// const planet_get_class = planet => planet.classe
+// const planet_get_distance = id => planet => PLANETS_DISTANCES[planet.id][id]
 
-const COMPARE = {
-    population: (a, b) => a - b,
-    distance: c0 => (c1, c2) => UTILS.compute_distance(c0, c1) - UTILS.compute_distance(c0, c2),
-}
+//const planet_is_livable = planet => CONST.CLASS_PRIORITY[planet_get_class(planet)] < 4
+const planet_belongs_to = owner => planet => planet.owner == owner
+//const planet_belongs_to_noone = planet_belongs_to(CONST.OWNER.FREE)
+const planet_belongs_to_me = planet_belongs_to(CONST.OWNER.ME)
+//const planet_belongs_to_other = planet_belongs_to(CONST.OWNER.OTHER)
+//const planet_dont_belongs_to_me = planet => planet.owner != CONST.OWNER.ME
 
+//const compare_units = (a, b) => a - b
+//const compare_distance = c0 => (c1, c2) => compute_distance(c0, c1) - compute_distance(c0, c2)
 
-const SORT = {
-    population: UTILS.sort_by(COMPARE.population),
-    distance: planet => planets => UTILS.sort_by(COMPARE.distance(PLANET.GET.coordinates(planet)))(planets),
-    distances: distances => distances.sort((d1, d2) => d1.distance - d2.distance),
-}
+//const sort_by = compare_fn => array => array.sort(compare_fn)
+//const sort_by_units = sort_by(compare_units)
+//const sort_by_distance = planet => planets => sort_by(compare_distance(planet_get_coordinates(planet)))(planets)
+const sort_by_distances = distances => distances.sort((d1, d2) => d1.distance - d2.distance)
 
-const ORDER = {
-    make_fleet: (units, source_id, target_id) => ( { "units": units, "source": source_id, "target": target_id } ),
-    make_terraforming: planet_id => ( { "planet": planet_id } ),
-    make_order: (fleets_array, terraformings_array) => 
-        ( { "fleets": fleets_array.filter(fleet => fleet.units >= CONST.FLEET.UNITS.MIN), 
-            "terraformings": terraformings_array } ),
-}
+const make_fleet = (units, source_id, target_id) => ( { "units": units, "source": source_id, "target": target_id } )
+//const make_terraforming = planet_id => ( { "planet": planet_id } )
+const make_order = (fleets_array, terraformings_array) => 
+    ( { "fleets": fleets_array.filter(fleet => fleet.units >= CONST.FLEET.UNITS.MIN), 
+        "terraformings": terraformings_array } )
 
 //Computes distance graph - executed once
 function make_graph(planets_array, cb) {
@@ -86,13 +65,13 @@ function make_graph(planets_array, cb) {
         for (var j = 0; j < planets_array.length; j++) {
             if (i != j) {
                 var planet2 = planets_array[j]
-                distances.push({ id: planet2.id, owner: planet2.owner, classe: planet2.classe, distance: UTILS.compute_distance(PLANET.GET.coordinates(planet1), PLANET.GET.coordinates(planet2)) })
+                distances.push({ id: planet2.id, owner: planet2.owner, classe: planet2.classe, distance: compute_distance(planet_get_coordinates(planet1), planet_get_coordinates(planet2)) })
             }
         }
         graph.push({ id: planet1.id, owner: planet1.owner, classe: planet1.classe, distances: distances })
     }
 
-    graph.map(one_planet => SORT.distances(one_planet.distances))
+    graph.map(one_planet => sort_by_distances(one_planet.distances))
 
     return cb(graph)
 }
@@ -106,20 +85,19 @@ const get_population = distance => planets_array =>
 //const getfirst = planets_array => planets_array[0]
 
 // Get the nearest planet which is not mine and livable
-//const get_nearest_to_attack = planet => (PLANET.GET.distances(planet)(PLANETS_DISTANCES).filter(PLANET.TEST.is_not_mine))
-        //.filter(p => PLANET.TEST.is_livable(p))
+//const get_nearest_to_attack = planet => (planet_get_distances(planet)(PLANETS_DISTANCES).filter(planet_dont_belongs_to_me))
+//.filter(planet_is_livable)
 
 const make_array_order_from = my_planet => n_orders => planets =>
-    PLANET.GET.distances(my_planet)(PLANETS_DISTANCES)
+    planet_get_distances(my_planet)(PLANETS_DISTANCES)
         .filter(distance => get_owner(distance)(planets) != CONST.OWNER.ME || get_population(distance)(planets) < 20)
         .splice(0, n_orders)
-        .map(p => ORDER.make_fleet(
-                    PLANET.GET.population(my_planet) > 25 ? parseInt(PLANET.GET.population(my_planet) / 3)
-                    :   PLANET.GET.population(my_planet) > 15 ? 3 
+        .map(p => make_fleet(
+            planet_get_units(my_planet) > 25 ? parseInt(planet_get_units(my_planet) / 3)
+                :   planet_get_units(my_planet) > 15 ? 3 
                     :   CONST.FLEET.UNITS.INVALID,
-                    PLANET.GET.id(my_planet),
-                    PLANET.GET.id(p) ) )
-
+            planet_get_id(my_planet),
+            planet_get_id(p) ) )
     
 
 
@@ -148,21 +126,10 @@ function make_orders(planets_array, my_planets, current_game_id, cb) {
         make_graph(planets_array, function(graph){ 
             
             PLANETS_DISTANCES = graph
-
-            //UTILS.log("Distances from every planets", graph)
+            //log("PLANETS_DISTANCES", PLANETS_DISTANCES)
             
-            /*
-                var planet1 = PLANETS.FILTER.planet_id(1)(planets_array)
-                UTILS.log("PLANET.TEST.is_livable(planet1)", PLANET.TEST.is_livable(planet1))
-                UTILS.log("planets_array", planets_array)
-                UTILS.log("planet1", planet1)
-                UTILS.log("PLANET.GET.distances(planet1)", PLANET.GET.distances(planet1)(graph))
-                UTILS.log("PLANET.GET.distance(2)(planet1)", PLANET.GET.distance(2)(planet1))
-                UTILS.log("SORT.distance(planet1)(planets_array)", SORT.distance(planet1)(planets_array))
-            */
-
             // Attacks without any terraforming
-            orders = ORDER.make_order(attack_from(my_planets)(2)(planets_array), [])
+            orders = make_order(attack_from(my_planets)(2)(planets_array), [])
             cb(orders)
         })
     }
@@ -172,7 +139,7 @@ function make_orders(planets_array, my_planets, current_game_id, cb) {
         if (ATTACK) {
             ATTACK = false
             // Attacks without any terraforming
-            orders = ORDER.make_order(attack_from(my_planets)(2)(planets_array), [])
+            orders = make_order(attack_from(my_planets)(2)(planets_array), [])
         }
         else {
             ATTACK = true
@@ -196,33 +163,33 @@ app.use(bodyParser.urlencoded({ extended: true })) // support encoded bodies
 
 app.post("/", function (request, response) {
 
-    var planets_array = request.body.planets
+    PLANETS_ARRAY = request.body.planets
     var current_game_id = request.body.config.id
     
-    var my_planets = PLANETS.FILTER.my_planets(planets_array)
+    var my_planets = PLANETS_ARRAY.filter(planet_belongs_to_me)
     
-    UTILS.log("my_planets", my_planets)
+    log("my_planets", my_planets)
     
     /*
-        UTILS.log(request.body)
+        log(request.body)
         var fleets_array = request.body.fleets
         var turns_left = request.body.config.maxTurn - request.body.config.turn
-        var free_planets = PLANETS.FILTER.free_planets(planets_array)
-        var other_planets = PLANETS.FILTER.other_planets(planets_array)
+        var free_planets = PLANETS_ARRAY.filter(planet_belongs_to_noone)
+        var other_planets = PLANETS_ARRAY.filter(planet_belongs_to_other)
         
-        UTILS.log("my_planets", my_planets)
-        UTILS.log("free_planets", free_planets)
-        UTILS.log("other_planets", other_planets)
+        log("my_planets", my_planets)
+        log("free_planets", free_planets)
+        log("other_planets", other_planets)
 
-        var fleets = [ ORDER.make_fleet(101, 1, 5), ORDER.make_fleet(102, 1, 10), ORDER.make_fleet(150, 2, 15) ]
-        var terraformings = [ ORDER.make_terraforming(1), ORDER.make_terraforming(5), ORDER.make_terraforming(9), ORDER.make_terraforming(15) ]
-        var order = ORDER.make_order(fleets, terraformings)
+        var fleets = [ make_fleet(101, 1, 5), make_fleet(102, 1, 10), make_fleet(150, 2, 15) ]
+        var terraformings = [ make_terraforming(1), make_terraforming(5), make_terraforming(9), make_terraforming(15) ]
+        var order = make_order(fleets, terraformings)
     */
 
     
-    make_orders(planets_array, my_planets, current_game_id, function (orders) {
+    make_orders(PLANETS_ARRAY, my_planets, current_game_id, function (orders) {
 
-        UTILS.log("orders", orders)
+        log("orders", orders)
         
         response.json(orders)
     })
@@ -234,5 +201,5 @@ app.post("/", function (request, response) {
 
 
 var listener = app.listen(process.env.PORT, process.env.IP, function () {
-    UTILS.log("Your app is listening on", process.env.IP+"/"+listener.address().port)
+    log("Your app is listening on", process.env.IP+"/"+listener.address().port)
 })
